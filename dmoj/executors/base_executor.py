@@ -2,10 +2,9 @@ from __future__ import print_function
 
 import os
 import re
+import signal
 import subprocess
 import sys
-import signal
-import threading
 import time
 import traceback
 from distutils.spawn import find_executable
@@ -16,6 +15,8 @@ from dmoj.executors.mixins import PlatformExecutorMixin
 from dmoj.executors.resource_proxy import ResourceProxy
 from dmoj.judgeenv import env
 from dmoj.utils.ansi import ansi_style
+from dmoj.utils.communicate import *
+from dmoj.utils.error import print_protection_fault
 
 reversion = re.compile('.*?(\d+(?:\.\d+)+)', re.DOTALL)
 version_cache = {}
@@ -94,6 +95,8 @@ class BaseExecutor(PlatformExecutorMixin, ResourceProxy):
                     error_callback('Got unexpected stderr output:\n' + stderr)
                 else:
                     print(stderr, file=sys.stderr)
+            if hasattr(proc, 'protection_fault') and proc.protection_fault:
+                print_protection_fault(proc.protection_fault)
             return res
         except Exception:
             if output:
@@ -120,7 +123,12 @@ class BaseExecutor(PlatformExecutorMixin, ResourceProxy):
             version = None
             for flag in flags:
                 try:
-                    output = subprocess.check_output([path, flag], stderr=subprocess.STDOUT).decode('utf-8')
+                    command = [path]
+                    if isinstance(flag, (tuple, list)):
+                        command.extend(flag)
+                    else:
+                        command.append(flag)
+                    output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode('utf-8')
                 except subprocess.CalledProcessError:
                     pass
                 else:
@@ -320,7 +328,10 @@ class CompiledExecutor(BaseExecutor):
         return self.TimedPopen(self.get_compile_args(), **kwargs)
 
     def get_compile_output(self, process):
-        return process.communicate()[1]
+        # Use safe_communicate because otherwise, malicious submissions can cause a compiler
+        # to output hundreds of megabytes of data as output before being killed by the time limit,
+        # which effectively murders the MySQL database waiting on the site server.
+        return safe_communicate(process, None, outlimit=65536, errlimit=65536)[1]
 
     def get_compiled_file(self):
         return self._file(self.problem)
@@ -333,7 +344,10 @@ class CompiledExecutor(BaseExecutor):
 
     def compile(self):
         process = self.get_compile_process()
-        output = self.get_compile_output(process)
+        try:
+            output = self.get_compile_output(process)
+        except OutputLimitExceeded:
+            output = 'compiler output too long (> 64kb)'
 
         if self.is_failed_compile(process):
             self.handle_compile_error(output)

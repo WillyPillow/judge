@@ -96,15 +96,16 @@ setup(
         'console_scripts': [
             'dmoj = dmoj.judge:main',
             'dmoj-cli = dmoj.cli:main',
+            'dmoj-autoconf = dmoj.executors.autoconfig:main',
         ]
     },
     ext_modules=cythonize(extensions),
-    install_requires=['watchdog', 'pyyaml', 'ansi2html', 'termcolor', 'six'],
+    install_requires=['watchdog', 'pyyaml', 'ansi2html', 'termcolor', 'pygments', 'six'],
 
     author='quantum5, Xyene',
     author_email='admin@dmoj.ca',
     url='https://github.com/DMOJ/judge',
-    description='The judge component of the Don Mills Online Judge platform',
+    description='The judge component of the DMOJ: Modern Online Judge platform',
     keywords='online-judge',
     classifiers=[
         'Development Status :: 3 - Beta',
