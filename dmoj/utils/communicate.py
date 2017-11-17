@@ -140,7 +140,7 @@ else:
         while fd2file:
             try:
                 ready = poller.poll()
-            except select.error, e:
+            except select.error as e:
                 if e.args[0] == errno.EINTR:
                     continue
                 raise
@@ -171,7 +171,7 @@ else:
                         if stderr is not None:
                             stderr = ''.join(stderr)
 
-                        raise OutputLimitExceeded(['stderr', 'stdout'][proc.stdout is not None and proc.stdout.fileno() == fd],
+                        raise OutputLimitExceeded(['stderr', 'stdout'][proc.stdout.fileno() == fd],
                                                   stdout, stderr)
                 else:
                     # Ignore hang up or errors.

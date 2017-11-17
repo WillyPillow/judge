@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import re
 import subprocess
@@ -14,7 +16,6 @@ from dmoj.executors.mixins import PlatformExecutorMixin
 from dmoj.executors.resource_proxy import ResourceProxy
 from dmoj.judgeenv import env
 from dmoj.utils.ansi import ansi_style
-from dmoj.utils.communicate import *
 
 reversion = re.compile('.*?(\d+(?:\.\d+)+)', re.DOTALL)
 version_cache = {}
@@ -74,7 +75,7 @@ class BaseExecutor(PlatformExecutorMixin, ResourceProxy):
             return True
 
         if output:
-            print ansi_style("%-39s%s" % ('Self-testing #ansi[%s](|underline):' % cls.get_executor_name(), '')),
+            print(ansi_style("%-39s%s" % ('Self-testing #ansi[%s](|underline):' % cls.get_executor_name(), '')), end=' ')
         try:
             executor = cls(cls.test_name, cls.test_program)
             proc = executor.launch(time=cls.test_time, memory=cls.test_memory) if sandbox else executor.launch_unsafe()
@@ -84,18 +85,18 @@ class BaseExecutor(PlatformExecutorMixin, ResourceProxy):
             if output:
                 # Cache the versions now, so that the handshake packet doesn't take ages to generate
                 cls.get_runtime_versions()
-                print ansi_style(['#ansi[Failed](red|bold)', '#ansi[Success](green|bold)'][res])
+                print(ansi_style(['#ansi[Failed](red|bold)', '#ansi[Success](green|bold)'][res]))
             if stdout.strip() != test_message and error_callback:
                 error_callback('Got unexpected stdout output:\n' + stdout)
             if stderr:
                 if error_callback:
                     error_callback('Got unexpected stderr output:\n' + stderr)
                 else:
-                    print>> sys.stderr, stderr
+                    print(stderr, file=sys.stderr)
             return res
         except Exception:
             if output:
-                print ansi_style('#ansi[Failed](red|bold)')
+                print(ansi_style('#ansi[Failed](red|bold)'))
                 traceback.print_exc()
             if error_callback:
                 error_callback(traceback.format_exc())
@@ -159,12 +160,11 @@ class BaseExecutor(PlatformExecutorMixin, ResourceProxy):
             return {}, False, 'Unimplemented'
         result = {}
 
-        for key, files in mapping.iteritems():
+        for key, files in mapping.items():
             file = cls.find_command_from_list(files)
             if file is None:
                 return result, False, 'Failed to find "%s"' % key
             result[key] = file
-
         return cls.autoconfig_run_test(result)
 
     @classmethod
@@ -215,7 +215,7 @@ class ScriptExecutor(BaseExecutor):
 
     def create_files(self, problem_id, source_code):
         with open(self._code, 'wb') as fo:
-            fo.write(source_code)
+            fo.write(source_code.encode('utf-8'))
 
     def get_cmdline(self):
         return [self.get_command(), self._code]
@@ -288,7 +288,7 @@ class CompiledExecutor(BaseExecutor):
     def create_files(self, problem_id, source_code, *args, **kwargs):
         self._code = self._file(problem_id + self.ext)
         with open(self._code, 'wb') as fo:
-            fo.write(source_code)
+            fo.write(source_code.encode('utf-8'))
 
     def get_compile_args(self):
         raise NotImplementedError()
@@ -319,10 +319,7 @@ class CompiledExecutor(BaseExecutor):
         return self.TimedPopen(self.get_compile_args(), **kwargs)
 
     def get_compile_output(self, process):
-        # Use safe_communicate because otherwise, malicious submissions can cause a compiler
-        # to output hundreds of megabytes of data as output before being killed by the time limit,
-        # which effectively murders the MySQL database waiting on the site server.
-        return safe_communicate(process, None, outlimit=65536, errlimit=65536)[1]
+        return process.communicate()[1]
 
     def get_compiled_file(self):
         return self._file(self.problem)
@@ -335,10 +332,7 @@ class CompiledExecutor(BaseExecutor):
 
     def compile(self):
         process = self.get_compile_process()
-        try:
-            output = self.get_compile_output(process)
-        except OutputLimitExceeded:
-            output = 'compiler output too long (> 64kb)'
+        output = self.get_compile_output(process)
 
         if self.is_failed_compile(process):
             self.handle_compile_error(output)

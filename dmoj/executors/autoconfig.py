@@ -1,5 +1,6 @@
+from __future__ import print_function
+
 import os
-import sys
 import traceback
 
 import yaml
@@ -31,9 +32,6 @@ def main():
 
     judgeenv.env['runtime'] = {}
 
-    if silent:
-        sys.stderr = open(os.devnull, 'w')
-
     for name in get_available():
         executor = load_executor(name)
 
@@ -48,7 +46,8 @@ def main():
 
         if hasattr(Executor, 'autoconfig'):
             if not silent:
-                print ansi_style('%-43s%s' % ('Auto-configuring #ansi[%s](|underline):' % name, '')),
+                print(ansi_style('%-43s%s' % ('Auto-configuring #ansi[%s](|underline):' % name, '')), end=' ')
+
             try:
                 data = Executor.autoconfig()
                 config = data[0]
@@ -57,30 +56,31 @@ def main():
                 errors = '' if len(data) < 4 else data[3]
             except Exception:
                 if not silent:
-                    print ansi_style('#ansi[Not supported](red|bold)')
+                    print(ansi_style('#ansi[Not supported](red|bold)'))
                     traceback.print_exc()
             else:
                 if not silent:
-                    print ansi_style(['#ansi[%s](red|bold)', '#ansi[%s](green|bold)'][success] %
-                                 (feedback or ['Failed', 'Success'][success]))
+                    print(ansi_style(['#ansi[%s](red|bold)', '#ansi[%s](green|bold)'][success] %
+                                 (feedback or ['Failed', 'Success'][success])))
 
                 if not success:
                     if not silent:
                         if config:
-                            print '  Attempted:'
-                            print '   ', yaml.dump(config, default_flow_style=False).rstrip().replace('\n', '\n' + ' ' * 4)
+                            print('  Attempted:')
+                            print('   ', yaml.dump(config, default_flow_style=False).rstrip().replace('\n', '\n' + ' ' * 4))
 
                         if errors:
-                            print '  Errors:'
-                            print '   ', errors.replace('\n', '\n' + ' ' * 4)
+                            print('  Errors:')
+                            print('   ', errors.replace('\n', '\n' + ' ' * 4))
+
 
                 if success:
                     result.update(config)
 
     if not silent:
-        print
-        print ansi_style('#ansi[Configuration result](green|bold|underline):')
-    print yaml.dump({'runtime': result}, default_flow_style=False).rstrip()
+      print()
+      print(ansi_style('#ansi[Configuration result](green|bold|underline):'))
+    print(yaml.dump({'runtime': result}, default_flow_style=False).rstrip())
 
 if __name__ == '__main__':
     main()

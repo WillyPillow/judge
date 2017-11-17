@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import errno
 import os
 import re
@@ -39,7 +41,6 @@ class MonoExecutor(CompiledExecutor):
         fs = self.get_fs() + [self._dir]
         sec = CHROOTSecurity(fs, io_redirects=launch_kwargs.get('io_redirects', None))
         sec[sys_sched_getaffinity] = ALLOW
-        sec[sys_sched_setscheduler] = ALLOW
         sec[sys_statfs] = ALLOW
         sec[sys_ftruncate64] = ALLOW
         sec[sys_sched_yield] = ALLOW
@@ -51,11 +52,11 @@ class MonoExecutor(CompiledExecutor):
         writable[1] = writable[2] = True
 
         def handle_open(debugger):
-            file = debugger.readstr(debugger.uarg0)
-            if fs.match(file) is None:
-                print>>sys.stderr, 'Not allowed to access:', file
+            f = debugger.readstr(debugger.uarg0)
+            if fs.match(f) is None:
+                print('Not allowed to access:', f, file=sys.stderr)
                 return False
-            can = write_fs.match(file) is not None
+            can = write_fs.match(f) is not None
 
             def update():
                 writable[debugger.result] = can
@@ -88,7 +89,7 @@ class MonoExecutor(CompiledExecutor):
         def unlink(debugger):
             path = debugger.readstr(debugger.uarg0)
             if UNLINK_FS.match(path) is None:
-                print 'Not allowed to unlink:', path
+                print('Not allowed to unlink:', path)
                 return False
             return True
 
