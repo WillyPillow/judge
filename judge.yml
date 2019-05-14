@@ -1,0 +1,10 @@
+problem_storage_root:
+  - /dmoj/problems
+id: LocalJudge
+runtime:
+  g++: /usr/bin/g++
+  g++11: /usr/bin/g++
+  g++14: /usr/bin/g++
+  g++17: /usr/bin/g++
+  gcc: /usr/bin/gcc
+  gcc11: /usr/bin/gcc
